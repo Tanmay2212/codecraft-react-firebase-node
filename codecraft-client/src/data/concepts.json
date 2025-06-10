@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "title": "useState",
+    "category": "React",
+    "description": "It allows you to add state in functional components.",
+    "example": "const [count, setCount] = useState(0);",
+    "realLife": "Jaise tu mobile ka brightness manually badhata hai, waise hi state change karke UI badalta hai."
+  },
+  {
+    "id": 2,
+    "title": "event bubbling",
+    "category": "JavaScript",
+    "description": "An event starts from the deepest element and bubbles up to the parent.",
+    "example": "div.onclick = () => alert('Clicked!');",
+    "realLife": "Jaise glass gira toh awaaz pehle ground se, phir room mein spread hoti hai."
+  },
+  {
+    "id": 3,
+    "title": "map()",
+    "category": "JavaScript",
+    "description": "Creates a new array by applying a function to each element.",
+    "example": "[1, 2, 3].map(n => n * 2) // [2, 4, 6]",
+    "realLife": "Jaise sabhi students ke marks ko double karna ek list mein."
+  }
+]
