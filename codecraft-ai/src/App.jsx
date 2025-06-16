@@ -1,7 +1,6 @@
-// src/App.jsx
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate, Link } from "react-router-dom";
-import { useAuth } from "./context/AuthContext"; // ✅ Added this
+import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
 import { auth } from "./firebase";
 
 // Pages & Components
@@ -16,10 +15,10 @@ import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
 
 function App() {
-  const { user, role } = useAuth(); // ✅ Added this
+  const { user, role } = useAuth();
 
   return (
-    <BrowserRouter>
+    <>
       {user && (
         <nav className="flex justify-between p-4 bg-gray-100 shadow">
           <div className="font-bold">🚀 Company Assistant</div>
@@ -72,7 +71,7 @@ function App() {
         />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
-    </BrowserRouter>
+    </>
   );
 }
 
