@@ -2,47 +2,54 @@
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { askGeminiWithContext } from "./gemini";
+import Fuse from "fuse.js";
 
-/**
- * Search Firestore for relevant docs and query Gemini.
- * @param {string} userQuery - The user's question.
- * @param {object} filters - Optional filters { role, department, category }.
- */
-export async function searchDocsAndAskGemini(userQuery, filters = {}) {
+export async function searchDocsAndAskGemini(userQuery) {
   try {
     const snapshot = await getDocs(collection(db, "company_docs"));
-    let matchedDocs = [];
+    const docs = snapshot.docs.map((doc) => ({
+      fileName: doc.data().fileName || "Unnamed",
+      content: doc.data().content || "",
+    }));
 
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      const matches =
-        (!filters.role || data.role?.toLowerCase().includes(filters.role.toLowerCase())) &&
-        (!filters.department || data.department?.toLowerCase().includes(filters.department.toLowerCase())) &&
-        (!filters.category || data.category?.toLowerCase().includes(filters.category.toLowerCase()));
+    if (!docs.length) return "❌ No documents available.";
 
-      if (matches && data.content) {
-        matchedDocs.push(data.content);
-      }
+    // 🔍 Fuzzy match but wider search (lenient threshold)
+    const fuse = new Fuse(docs, {
+      keys: ["content"],
+      threshold: 0.5, // was 0.3 — more relaxed
+      includeScore: true,
     });
 
-    if (matchedDocs.length === 0) {
-      return "❌ Sorry, this is not documented.";
-    }
+    const result = fuse.search(userQuery);
 
-    const combinedText = matchedDocs.join("\n\n---\n\n");
+    // Even if Fuse returns nothing, we fallback to all docs
+    const matchedDocs = result.length > 0
+      ? result.map((r) => r.item)
+      : docs.slice(0, 5); // fallback to first 5 docs if none match
 
-    const prompt = `You are a company policy assistant. You can only answer based on the documents provided below. 
-If the answer is not available in the docs, respond strictly with: "I'm sorry, this is not documented."
+    // 🧠 Prepare prompt
+    const combined = matchedDocs
+      .map(
+        (doc) => `📄 File: ${doc.fileName}\n${doc.content}`
+      )
+      .join("\n\n---\n\n");
+
+    const prompt = `
+You are a company policy assistant. Use ONLY the following document data to answer. 
+Include file name in your response. If answer is not found, reply:
+"I'm sorry, this is not documented."
 
 Documents:
-${combinedText}
+${combined}
 
-User question: ${userQuery}`;
+User Question: ${userQuery}
+    `;
 
     const reply = await askGeminiWithContext(prompt);
     return reply;
   } catch (err) {
-    console.error("🔥 Firestore + Gemini error:", err);
-    return "❌ Error searching documents.";
+    console.error("🔥 Error searching Gemini:", err);
+    return "❌ Gemini failed to respond.";
   }
 }
