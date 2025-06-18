@@ -3,72 +3,56 @@ import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { auth } from "./firebase";
 
-// Pages & Components
+// Components & Pages
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import FileUpload from "./components/FileUpload";
 import ChatBox from "./components/ChatBox";
+import FileUpload from "./components/FileUpload";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLayout from "./layouts/AdminLayout";
 
-// Wrappers
+// Route Guards
 import PrivateRoute from "./components/PrivateRoute";
 import AdminRoute from "./components/AdminRoute";
 
 function App() {
-  const { user, role } = useAuth();
+  const { user, permissions } = useAuth();
 
   return (
     <>
-      {user && (
-        <nav className="flex justify-between p-4 bg-gray-100 shadow">
-          <div className="font-bold">🚀 Company Assistant</div>
-          <div className="space-x-4">
-            <Link to="/">Home</Link>
-            <Link to="/chat">Chat</Link>
-            {role === "admin" && (
-              <>
-                <Link to="/upload">Upload</Link>
-                <Link to="/admin">Admin</Link>
-              </>
-            )}
-            <span className="text-gray-600 ml-2">👤 {role}</span>
-            <button
-              onClick={() => auth.signOut()}
-              className="ml-2 px-3 py-1 bg-red-500 text-white rounded"
-            >
-              Logout
-            </button>
-          </div>
-        </nav>
-      )}
+      {/* Navbar */}
+      <nav className="flex justify-between items-center p-4 bg-blue-100 shadow">
+        <div className="text-lg font-bold text-blue-800">🚀 Company Assistant</div>
+        <div className="flex items-center gap-4">
+          {user && <Link to="/chat" className="hover:underline">Chat</Link>}
+          {permissions?.canUpload && (
+  <Link to="/upload" className="hover:underline">Upload</Link>
+)}
+          {permissions?.canViewDashboard && (
+  <Link to="/admin" className="hover:underline">Dashboard</Link>
+)}
+          {user && <button onClick={() => auth.signOut()} className="bg-red-500 text-white px-3 py-1 rounded">Logout</button>}
+        </div>
+      </nav>
 
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-        <Route
-          path="/chat"
-          element={
-            <PrivateRoute>
-              <ChatBox />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/upload"
-          element={
-            <AdminRoute>
-              <FileUpload />
-            </AdminRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <AdminRoute>
-              <AdminDashboard />
-            </AdminRoute>
-          }
-        />
+
+        <Route path="/chat" element={<PrivateRoute><ChatBox /></PrivateRoute>} />
+
+        <Route path="/upload" element={
+          <AdminRoute>
+            <AdminLayout><FileUpload /></AdminLayout>
+          </AdminRoute>
+        } />
+
+        <Route path="/admin" element={
+          <AdminRoute>
+            <AdminLayout><AdminDashboard /></AdminLayout>
+          </AdminRoute>
+        } />
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </>

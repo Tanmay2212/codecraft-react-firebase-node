@@ -1,8 +1,7 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -10,28 +9,49 @@ export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
+  const [permissions, setPermissions] = useState({
+    canUpload: false,
+    canViewDashboard: false,
+  });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       if (user) {
-        try {
-          const userRef = doc(db, "users", user.uid);
-          const snap = await getDoc(userRef);
-          if (snap.exists()) {
-            setRole(snap.data().role);
-          } else {
-            console.warn("⚠️ No user doc found, treating as employee");
-            setRole("employee");
-          }
-        } catch (err) {
-          console.error("🔥 Error fetching user role:", err);
-          setRole("employee"); // fallback
+        const userRef = doc(db, "users", user.uid);
+        const snap = await getDoc(userRef);
+
+        if (snap.exists()) {
+          const data = snap.data();
+          setRole(data.role || "employee");
+          setPermissions({
+            canUpload: data.canUpload || false,
+            canViewDashboard: data.canViewDashboard || false,
+          });
+        } else {
+          const defaultUser = {
+            name: user.displayName || "Unnamed",
+            email: user.email,
+            role: "employee",
+            canUpload: false,
+            canViewDashboard: false,
+          };
+          await setDoc(userRef, defaultUser);
+          setRole("employee");
+          setPermissions({
+            canUpload: false,
+            canViewDashboard: false,
+          });
         }
       } else {
         setRole(null);
+        setPermissions({
+          canUpload: false,
+          canViewDashboard: false,
+        });
       }
+
       setLoading(false);
     });
 
@@ -39,7 +59,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, role, loading }}>
+    <AuthContext.Provider value={{ user, role, permissions, loading }}>
       {children}
     </AuthContext.Provider>
   );

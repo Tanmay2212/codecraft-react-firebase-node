@@ -12,18 +12,9 @@ const FileUpload = () => {
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState("");
   const [saving, setSaving] = useState(false);
-
-  const [department, setDepartment] = useState("HR");
-  const [position, setPosition] = useState("Intern");
-  const [topic, setTopic] = useState("Policies");
-
-  if (!role || !["admin", "hr", "owner"].includes(role)) {
-    return (
-      <div className="text-red-500 text-center mt-10 text-lg">
-        ⛔ Access Denied: Only Admins, HR, or Owner can upload documents.
-      </div>
-    );
-  }
+  const [department, setDepartment] = useState("");
+  const [position, setPosition] = useState("");
+  const [topic, setTopic] = useState("");
 
   const extractTextFromPDF = async (file) => {
     const reader = new FileReader();
@@ -40,14 +31,14 @@ const FileUpload = () => {
         }
 
         if (!allText.trim()) {
-          alert("❌ No readable text found. This may be a scanned document.");
+          alert("❌ No text found. Scanned PDF?");
           return;
         }
 
         setText(allText.trim());
       } catch (err) {
-        alert("❌ PDF extraction failed.");
         console.error(err);
+        alert("❌ Failed to read PDF.");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -64,19 +55,18 @@ const FileUpload = () => {
     if (!file) return;
 
     setFileName(file.name);
-
     if (file.type === "application/pdf") await extractTextFromPDF(file);
     else if (file.type === "text/plain") await extractTextFromTXT(file);
     else {
-      alert("❌ Only PDF or TXT files allowed.");
-      setText("");
+      alert("❌ Only PDF or TXT allowed.");
       setFileName("");
+      setText("");
     }
   };
 
   const saveToFirestore = async () => {
-    if (!text || !fileName) {
-      alert("⚠️ Please select a file and ensure content is extracted.");
+    if (!text || !fileName || !department || !position || !topic) {
+      alert("⚠️ Please fill all fields and upload a file.");
       return;
     }
 
@@ -91,16 +81,20 @@ const FileUpload = () => {
         createdAt: serverTimestamp(),
       });
 
-      alert("✅ File saved successfully!");
+      alert("✅ Document uploaded.");
       setText("");
       setFileName("");
     } catch (err) {
-      console.error("❌ Firestore save error:", err);
-      alert("❌ Failed to save file.");
+      console.error("Upload error:", err);
+      alert("❌ Upload failed.");
     } finally {
       setSaving(false);
     }
   };
+
+  if (!role || !["admin", "hr", "owner"].includes(role)) {
+    return <div className="text-red-500 mt-10 text-center text-lg">⛔ Access Denied</div>;
+  }
 
   return (
     <div className="max-w-3xl mx-auto p-4">
@@ -133,12 +127,7 @@ const FileUpload = () => {
 
       {text && (
         <>
-          <textarea
-            value={text}
-            readOnly
-            rows={10}
-            className="w-full border p-2 mb-4 bg-gray-100"
-          />
+          <textarea value={text} readOnly rows={10} className="w-full border p-2 mb-4 bg-gray-100" />
           <button
             onClick={saveToFirestore}
             disabled={saving}
